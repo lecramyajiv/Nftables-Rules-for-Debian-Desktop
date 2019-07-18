@@ -30,7 +30,7 @@ table inet filter {
 		iifname "enp2s0" ct state invalid,untracked log prefix "Invalid-Input: " level info flags all
 		iifname "enp2s0" ct state invalid,untracked drop
 		oifname "enp2s0" ct state invalid,untracked log prefix "Invalid-Output: " level info flags all
-		oifname "enp2s0" ct state invalid,untracked log prefix "Invalid-Output: " level info flags all
+
 	}
 
 	chain forward {
