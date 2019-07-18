@@ -1,4 +1,4 @@
-Add Table filter
+**Add Table filter**
  
 nft add table inet filter
 
@@ -32,6 +32,25 @@ nft add rule  inet filter input iifname enp2s0 ip daddr 255.255.255.255 drop
 nft add rule  inet filter input iifname enp2s0 ip saddr 169.254.0.0/16  drop
 nft add rule  inet filter input iifname enp2s0 ip saddr 0.0.0.0/8  drop
 nft add rule  inet filter input iifname enp2s0 ip daddr 0.0.0.0/8  drop
+
+Dropping TCP stealth scan
+
+
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(syn\|fin\) == \(syn\|fin\) drop 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(syn\|rst\) == \(syn\|rst\) drop 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|rst\) == \(fin\|rst\) drop 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(ack\|fin\) ==  fin  drop 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(ack\|psh\) ==  psh  drop 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(ack\|urg\) ==  urg  drop 
+ 
+ Dropping Null scan
+ 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) \< fin drop
+ 
+ Dropping Xmas Scan
+ 
+ nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|psh\|urg\) drop
+
 
 icmp limit rate and acceptable icmp types have to be combined in nftables. remember to give space for every type
 
