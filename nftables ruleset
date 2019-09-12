@@ -1,36 +1,44 @@
-table inet filter {
+<pre>table ip filter {
 	chain input {
 		type filter hook input priority 0; policy drop;
-		iifname "enp2s0" tcp flags != syn ct state new drop
-		iifname "lo" ct state established,related accept
-		iifname "enp2s0" ct state established,related,new accept
-		iifname "enp2s0" udp length { 28-32 } drop
-		iifname "enp2s0" ip saddr 10.0.0.0/8 drop
-		iifname "enp2s0" ip saddr 172.16.0.0/12 drop
-		iifname "enp2s0" ip saddr 192.168.0.0/16 drop
-		iifname "enp2s0" ip saddr 224.0.0.0/4 drop
-		iifname "enp2s0" ip daddr 224.0.0.0/4 ip protocol != udp drop
-		iifname "enp2s0" ip saddr 240.0.0.0/5 drop
-		iifname "enp2s0" ip saddr 127.0.0.0/8 drop
-		iifname "enp2s0" ip saddr 255.255.255.255 drop
-		iifname "enp2s0" ip daddr 255.255.255.255 drop
-		iifname "enp2s0" ip saddr 169.254.0.0/16 drop
-		iifname "enp2s0" ip saddr 0.0.0.0/8 drop
-		iifname "enp2s0" ip daddr 0.0.0.0/8 drop
-		iifname "enp2s0" tcp flags & (fin | syn) == fin | syn drop
-		iifname "enp2s0" tcp flags & (syn | rst) == syn | rst drop
-		iifname "enp2s0" tcp flags & (fin | rst) == fin | rst drop
-		iifname "enp2s0" tcp flags & (fin | ack) == fin drop
-		iifname "enp2s0" tcp flags & (psh | ack) == psh drop
-		iifname "enp2s0" tcp flags & (ack | urg) == urg drop
-		iifname "enp2s0" tcp flags & (fin | syn | rst | psh | ack | urg) < fin drop
-		iifname "enp2s0" tcp flags & (fin | syn | rst | psh | ack | urg) == fin | psh | urg drop
-		iifname "enp2s0" icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 1/second accept
-		iifname "enp2s0" icmp type { source-quench, redirect, echo-request, router-advertisement, router-solicitation, parameter-problem, timestamp-request, timestamp-reply, info-request, info-reply, address-mask-request, address-mask-reply } drop
-		iifname "enp2s0" ct state invalid,untracked log prefix "Invalid-Input: " level info flags all
-		iifname "enp2s0" ct state invalid,untracked drop
-		oifname "enp2s0" ct state invalid,untracked log prefix "Invalid-Output: " level info flags all
-
+		iifname &quot;lo&quot; accept
+		iifname &quot;enp2s0&quot; tcp flags != syn ct state new drop
+		iifname &quot;enp2s0&quot; ct state established,related,new accept
+		iifname &quot;enp2s0&quot; udp length { 28-32 } drop
+		iifname &quot;enp2s0&quot; ip saddr 10.0.0.0/8 drop
+		iifname &quot;enp2s0&quot; ip saddr 172.16.0.0/12 drop
+		iifname &quot;enp2s0&quot; ip saddr 192.168.0.0/16 drop
+		iifname &quot;enp2s0&quot; ip saddr 224.0.0.0/4 drop
+		iifname &quot;enp2s0&quot; ip daddr 224.0.0.0/4 ip protocol != udp drop
+		iifname &quot;enp2s0&quot; ip saddr 240.0.0.0/5 drop
+		iifname &quot;enp2s0&quot; ip saddr 127.0.0.0/8 drop
+		iifname &quot;enp2s0&quot; ip saddr 255.255.255.255 drop
+		iifname &quot;enp2s0&quot; ip daddr 255.255.255.255 drop
+		iifname &quot;enp2s0&quot; ip saddr 169.254.0.0/16 drop
+		iifname &quot;enp2s0&quot; ip saddr 0.0.0.0/8 drop
+		iifname &quot;enp2s0&quot; ip daddr 0.0.0.0/8 drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn) == fin | syn drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (syn | rst) == syn | rst drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | rst) == fin | rst drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | ack) == fin drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (psh | ack) == psh drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (ack | urg) == urg drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) &lt; fin drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) == fin | psh | urg drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) == fin | syn | rst | ack drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) == fin | syn | rst | psh | ack | urg drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) == fin | syn | rst | ack | urg drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | psh | ack | urg) == fin drop
+		iifname &quot;enp2s0&quot; tcp flags &amp; (fin | syn | rst | ack) == rst drop
+		iifname &quot;enp2s0&quot; tcp sport { 6000-6063 } ct state new drop
+		iifname &quot;enp2s0&quot; tcp sport { socks, cisco-sccp, nfs, 3128 } ct state new drop
+		iifname &quot;enp2s0&quot; udp sport { socks, cisco-sccp, nfs, 3128, 4045 } ct state new drop
+		iifname &quot;enp2s0&quot; icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 1/second accept
+		iifname &quot;enp2s0&quot; icmp type { source-quench, redirect, echo-request, parameter-problem, timestamp-request } drop
+		iifname &quot;enp2s0&quot; icmp type { timestamp-reply, info-request, info-reply, address-mask-request } drop
+		iifname &quot;enp2s0&quot; icmp type { router-advertisement, router-solicitation, address-mask-reply } drop
+		iifname &quot;enp2s0&quot; ct state invalid,untracked log prefix &quot;Invalid-Input: &quot; level info flags all
+		iifname &quot;enp2s0&quot; ct state invalid,untracked drop
 	}
 
 	chain forward {
@@ -41,10 +49,18 @@ table inet filter {
 
 	chain output {
 		type filter hook output priority 0; policy drop;
-		oifname "lo" ct state established,related accept
-		oifname "enp2s0" ct state established,related,new accept
-		oifname "enp2s0" icmp type { destination-unreachable, echo-request, time-exceeded } limit rate 1/second accept
-		oifname "enp2s0" icmp type { echo-reply, source-quench, redirect, router-advertisement, router-solicitation, parameter-problem, timestamp-request, timestamp-reply, info-request, info-reply, address-mask-request, address-mask-reply } drop
-		oifname "enp2s0" ct state invalid,untracked drop
+		oifname &quot;lo&quot; accept
+		oifname &quot;enp2s0&quot; tcp flags != syn ct state new drop
+		oifname &quot;enp2s0&quot; ct state established,related,new accept
+		oifname &quot;enp2s0&quot; tcp dport { 6000-6063 } ct state new drop
+		oifname &quot;enp2s0&quot; tcp dport { socks, cisco-sccp, nfs, 3128 } ct state new drop
+		oifname &quot;enp2s0&quot; udp dport { socks, cisco-sccp, nfs, 3128, 4045 } ct state new drop
+		oifname &quot;enp2s0&quot; icmp type { destination-unreachable, echo-request, time-exceeded } limit rate 1/second accept
+		oifname &quot;enp2s0&quot; icmp type { echo-reply, source-quench, redirect, parameter-problem, timestamp-request } drop
+		oifname &quot;enp2s0&quot; icmp type { timestamp-reply, info-request, info-reply, address-mask-request } drop
+		oifname &quot;enp2s0&quot; icmp type { router-advertisement, router-solicitation, address-mask-reply } drop
+		oifname &quot;enp2s0&quot; ct state invalid,untracked log prefix &quot;Invalid-Output: &quot; level info flags all
+		oifname &quot;enp2s0&quot; ct state invalid,untracked drop
 	}
 }
+</pre>
