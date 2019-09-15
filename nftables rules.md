@@ -1,24 +1,26 @@
-Add Table filter
+**Add Table filter **
  
 nft add table inet filter
 
-Add Input chain
+// Add Input chain
 
 nft add chain inet filter input { type filter hook input priority 0 \; counter \; policy drop \; }
 
-For new connection if tcp doesn't have syn flag set drop it
+// For new connection if tcp doesn't have syn flag set drop it
 
 nft add rule  inet filter input iifname enp2s0 tcp flags != syn ct state new drop
 
-Accept acceptable connections
+ Accept acceptable connections
+
 nft add rule  inet filter input iifname lo ct state established,related accept
+
 nft add rule  inet filter input iifname enp2s0 ct state new,established,related accept
 
-droppping udp length if is in the range of 28-32
+// Droppping udp length if is in the range of 28-32
 
 nft add rule  inet filter input iifname enp2s0 udp length { 28-32 } drop 
 
-dropping spoofing address
+// Dropping spoofing address
 
 nft add rule  inet filter input iifname enp2s0 ip saddr 10.0.0.0/8 drop
 nft add rule  inet filter input iifname enp2s0 ip saddr 172.16.0.0/12 drop
@@ -61,35 +63,36 @@ nft add rule  inet filter input iifname enp2s0 ip daddr 0.0.0.0/8  drop
  
 
 
-icmp limit rate and acceptable icmp types have to be combined in nftables. remember to give space for every type
+// Icmp limit rate and acceptable icmp types have to be combined in nftables. remember to give space for every type
 
 nft add rule  inet filter input iifname enp2s0 icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 1/second  accept
 
-reject every other icmp type explicitly
+// Reject every other icmp type explicitly, Types split for brevity
 
-nft add rule  inet filter input iifname enp2s0 icmp type {source-quench, redirect, echo-request,  parameter-problem, timestamp-request, timestamp-reply, info-request, info-reply, address-mask-request, address-mask-reply, router-advertisement, router-solicitation} drop
+nft add rule  inet filter input iifname enp2s0 icmp type { source-quench, redirect, echo-request,  parameter-problem } drop
+nft add rule  inet filter input iifname enp2s0 icmp type { timestamp-request, timestamp-reply, info-request, info-reply } drop
+nft add rule  inet filter input iifname enp2s0 icmp type { address-mask-request, address-mask-reply, router-advertisement, router-solicitation} drop
 
-Dropping invalid and untracked packets and logging them. we can't give limit rate to log prefix at the moment.
+// Dropping invalid and untracked packets and logging them. we can't give limit rate to log prefix at the moment.
 
 nft add rule  inet filter input iifname enp2s0 ct state invalid,untracked log flags all level info  prefix \"Invalid-Input: \"
 nft add rule  inet filter input iifname enp2s0 ct state invalid,untracked drop
 
-Forward policy
+// Forward policy
 
 nft add chain inet filter forward { type filter hook forward priority 0\; counter\; policy drop\;}
 nft add rule  inet filter forward  ct state established,related accept
 nft add rule  inet filter forward  ct state invalid,untracked drop
 
-Output Policy
+// Output Policy
 
-nft add chain inet filter output  { type filter hook output priority 0 \; counter \; }
+nft add chain inet filter output  { type filter hook output priority 0 \; counter \; policy drop \; }
 nft add rule  inet filter output oifname lo ct state established,related accept
 nft add rule inet filter output oifname enp2s0  ct state new,established,related accept
 nft add rule  inet filter output oifname enp2s0 icmp type {echo-request, destination-unreachable, time-exceeded} limit rate 1/second accept
 nft add rule  inet filter output oifname enp2s0 icmp type {echo-reply, source-quench, redirect, parameter-problem, timestamp-request, timestamp-reply, info-request, info-reply, address-mask-request, address-mask-reply, router-advertisement, router-solicitation} drop
 nft add rule  inet filter input  oifname enp2s0 ct state invalid,untracked log flags all level info  prefix \"Invalid-Output: \"
 nft add rule  inet filter output oifname enp2s0 ct state invalid,untracked drop
-nft add chain inet filter output  {  policy drop \; }
 
 
 
