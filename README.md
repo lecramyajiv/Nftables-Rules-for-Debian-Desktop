@@ -7,7 +7,7 @@ The file " nftables ruleset.md " contains the nftables script that is to be star
 boot time using systemd. 
 ```
 
-**Enabling the nftables at boot time
+_Enabling the nftables at boot time_
 
 ```bash
 systemctl enable nftables
