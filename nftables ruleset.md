@@ -1,4 +1,4 @@
-```yaml
+```json
 table ip filter {
 	chain input {
 		type filter hook input priority 0; policy drop;
