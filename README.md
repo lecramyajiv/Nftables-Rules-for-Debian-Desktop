@@ -33,4 +33,6 @@ Now go to /etc/rsyslog.d and create a file called nftables.conf with the followi
 Save the file and exit. Now all the log for nftables will be saved in these files
 
 ```
-[Reference](https://www.lastbreach.de/blog/firewall-logging-mit-nftables-und-rsyslog)
+_Reference_
+
+[Logging in Nftables](https://www.lastbreach.de/blog/firewall-logging-mit-nftables-und-rsyslog)
