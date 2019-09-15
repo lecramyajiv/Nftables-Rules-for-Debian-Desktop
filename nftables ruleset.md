@@ -2,7 +2,7 @@
 table ip filter {
 	chain input {
 		type filter hook input priority 0; policy drop;
-		iifname "lo" accept
+		iifname "lo" accept					# Accept lo
 		iifname "enp2s0" tcp flags != syn ct state new drop
 		iifname "enp2s0" ct state established,related,new accept
 		iifname "enp2s0" udp length { 28-32 } drop
