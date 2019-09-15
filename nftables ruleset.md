@@ -1,4 +1,9 @@
 ```bash
+
+# load the script from file 
+
+/usr/sbin/nft -f /etc/nftables.conf
+
 table ip filter {
 	chain input {
 		type filter hook input priority 0; policy drop;
