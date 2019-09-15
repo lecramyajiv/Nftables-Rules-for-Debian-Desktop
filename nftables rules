@@ -1,4 +1,4 @@
-**Add Table filter**
+Add Table filter
  
 nft add table inet filter
 
@@ -33,7 +33,7 @@ nft add rule  inet filter input iifname enp2s0 ip saddr 169.254.0.0/16  drop
 nft add rule  inet filter input iifname enp2s0 ip saddr 0.0.0.0/8  drop
 nft add rule  inet filter input iifname enp2s0 ip daddr 0.0.0.0/8  drop
 
-Dropping TCP stealth scan
+//Dropping TCP stealth scan
 
 
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(syn\|fin\) == \(syn\|fin\) drop 
@@ -43,15 +43,15 @@ Dropping TCP stealth scan
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(ack\|psh\) ==  psh  drop 
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(ack\|urg\) ==  urg  drop 
  
- Dropping Null scan
+ //Dropping Null scan
  
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) \< fin drop
  
- Dropping Xmas Scan
+// Dropping Xmas Scan
  
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|psh\|urg\) drop
  
- Misc scan rules
+ // Dropping Misc scan rules
  
  nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(ack\|rst\|syn\|fin\) drop
  nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|syn\|rst\|psh\|ack\|urg\) drop
@@ -63,9 +63,10 @@ Dropping TCP stealth scan
 
 icmp limit rate and acceptable icmp types have to be combined in nftables. remember to give space for every type
 
-nft add rule  inet filter input iifname enp2s0 icmp type {echo-reply, destination-unreachable, time-exceeded} limit rate 1/second  accept
+nft add rule  inet filter input iifname enp2s0 icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 1/second  accept
 
 reject every other icmp type explicitly
+
 nft add rule  inet filter input iifname enp2s0 icmp type {source-quench, redirect, echo-request,  parameter-problem, timestamp-request, timestamp-reply, info-request, info-reply, address-mask-request, address-mask-reply, router-advertisement, router-solicitation} drop
 
 Dropping invalid and untracked packets and logging them. we can't give limit rate to log prefix at the moment.
