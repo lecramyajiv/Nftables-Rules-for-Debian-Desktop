@@ -6,7 +6,7 @@ The file " nftables rules " contains the rules that is to be typed  in the termi
 The file " nftables ruleset.md " contains the nftables script that is to be started at 
 boot time using systemd. 
 
-# Enabling the nftables at boot time
+ _Enabling the nftables at boot time_
   
 systemctl enable nftables
  
