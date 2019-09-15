@@ -50,6 +50,15 @@ Dropping TCP stealth scan
  Dropping Xmas Scan
  
  nft add rule  inet filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|psh\|urg\) drop
+ 
+ Misc scan rules
+ 
+ nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(ack\|rst\|syn\|fin\) drop
+ nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|syn\|rst\|psh\|ack\|urg\) drop
+ nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(syn\|rst\|ack\|fin\|urg\) drop
+ nft add rule  ip filter input iifname enp2s0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == fin drop
+ nft add rule  ip filter input iifname enp2s0 tcp flags \& \(syn\|ack\|fin\|rst\) == rst drop
+ 
 
 
 icmp limit rate and acceptable icmp types have to be combined in nftables. remember to give space for every type
