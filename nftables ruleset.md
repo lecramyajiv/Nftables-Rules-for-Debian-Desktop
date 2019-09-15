@@ -1,3 +1,4 @@
+```c
 table ip filter {
 	chain input {
 		type filter hook input priority 0; policy drop;
@@ -63,3 +64,4 @@ table ip filter {
 		oifname "enp2s0" ct state invalid,untracked drop
 	}
 }
+```
