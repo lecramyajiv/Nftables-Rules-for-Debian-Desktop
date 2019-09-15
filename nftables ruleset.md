@@ -1,7 +1,6 @@
 ```bash
 
-# load the script from file 
-# /usr/sbin/nft -f /etc/nftables.conf
+# load the script from file at startup using systemd 
 
 table ip filter {
 	chain input {
