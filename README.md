@@ -19,7 +19,7 @@ Remove the Execstop in the nftable.service file. The file is usually located in
 /etc/systemd/system/sysinit.target.wants/nftables.service
 
 ```
-_ Logging invalid packets by rsyslog_
+_Logging invalid packets by rsyslog_
 
 ```bash
 Create a directory called nftables in /var/log and in it, create two files called
