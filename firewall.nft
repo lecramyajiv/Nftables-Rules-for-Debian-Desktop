@@ -1,0 +1,30 @@
+#! /usr/sbin/nft -f
+
+flush ruleset
+
+table ip filter {
+        chain input {
+                type filter hook input priority filter; policy drop;
+                iifname "eth0" ct state invalid,untracked counter drop comment " early drop of invalid packets "
+                iifname "eth0" tcp flags != syn ct state new drop
+                iifname != "lo" ip daddr 127.0.0.0/8 counter drop comment " not from loopback "
+                iifname "lo" ct state established,related accept
+                iifname "eth0" ct state established,related,new accept
+                iifname "eth0" ip protocol icmp counter accept comment " icmp "
+                counter comment " Dropped Incoming Packets "
+        }
+
+        chain forward {
+                type filter hook forward priority filter; policy drop;
+                counter comment " Dropped Forwarded Packets "
+        }
+
+        chain output {
+                type filter hook output priority filter; policy drop;
+                oifname "eth0" ct state invalid,untracked counter drop comment " Dropped Outgoing Invalid Packets "
+                oifname "lo" ct state established,related accept
+                oifname "eth0" ct state established,related,new accept
+                oifname "eth0" ip protocol icmp counter accept comment " Outgoing Icmp "
+                counter  comment " Dropped Outgoing Packets "
+        }
+}
