@@ -1,1 +1,220 @@
+#! /bin/sh
+
+# This is an explicit IPTABLES firewall based on the book Linux Security by steve suehring
+# and also by slackware firewall generator.
+
+# Load Iptables KernelModules
+
+echo "Loading kernel modules ..."
+
+# core netfilter module
+/sbin/modprobe ip_tables
+
+# the stateful connection tracking module
+/sbin/modprobe ip_conntrack
+
+# filter table module
+/sbin/modprobe iptable_filter
+
+# This is used to limit the number of packets per sec/min/hr
+/sbin/modprobe ipt_limit
+
+# This match checks against the TCP flags
+/sbin/modprobe ipt_state
+
+# The ftp nat module is required for non-PASV ftp support
+/sbin/modprobe ip_nat_ftp
+
+# the module for full ftp connection tracking
+/sbin/modprobe ip_conntrack_ftp
+
+# the module for full irc connection tracking
+/sbin/modprobe ip_conntrack_irc
+
+# Internet connected interface you can get from ip address command
+
+iface="eth0"
+
+# loopback interface
+
+local="lo"
+LO_IP="127.0.0.1"
+
+# sysctl location.  If set, it will use sysctl to adjust the kernel parameters.
+# If this is set to the empty string (or is unset), the use of sysctl
+# is disabled.
+# To echo the value directly to the /proc file instead
+# SYSCTL=""
+
+SYSCTL="/sbin/sysctl -w"
+
+# IPTables Location - adjust if needed
+
+IPT="/usr/sbin/iptables-nft"
+IPTS="/usr/sbin/iptables-nft-save"
+IPTR="/usr/sbin/iptables-nft-restore"
+
+# Save and Restore arguments handled here
+if [ "$1" = "save" ]
+then
+	echo -n "Saving firewall to /etc/sysconfig/iptables ... "
+	$IPTS > /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+elif [ "$1" = "restore" ]
+then
+	echo -n "Restoring firewall from /etc/sysconfig/iptables ... "
+	$IPTR < /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+fi
+
+# Setting up Sysctl settings
+
+# This enables SYN flood protection.
+# The SYN cookies activation allows your system to accept an unlimited
+# number of TCP connections while still trying to give reasonable
+# service during a denial of service attack.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/tcp_syncookies
+else
+    $SYSCTL net.ipv4.tcp_syncookies="1"
+fi
+
+# This enables source validation by reversed path according to RFC1812.
+# In other words, did the response packet originate from the same interface
+# through which the source packet was sent?  It's recommended for single-homed
+# systems and routers on stub networks.  Since those are the configurations
+# this firewall is designed to support, I turn it on by default.
+# Turn it off if you use multiple NICs connected to the same network.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/rp_filter
+else
+    $SYSCTL net.ipv4.conf.all.rp_filter="1"
+fi
+
+# This kernel parameter instructs the kernel to ignore all ICMP
+# echo requests sent to the broadcast address.  This prevents
+# a number of smurfs and similar DoS nasty attacks.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+else
+    $SYSCTL net.ipv4.icmp_echo_ignore_broadcasts="1"
+fi
+
+# Source routing is rarely used legitimately today. Firewalls commonly drop all source-
+# routed packets. This command disables source-routed packets
+# This option can be used to accept or refuse source routed
+# packets.  It is usually on by default, but is generally
+# considered a security risk.  This option turns it off.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "0" > /proc/sys/net/ipv4/conf/all/accept_source_route
+else
+    $SYSCTL net.ipv4.conf.all.accept_source_route="0"
+fi
+
+# This option can disable ICMP redirects.ICMP redirects
+# are generally considered a security risk and shouldn't be
+# needed by most systems using this generator.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "0" > /proc/sys/net/ipv4/conf/all/accept_redirects
+else
+    $SYSCTL net.ipv4.conf.all.accept_redirects="0"
+fi
+
+# Don't send Redirect Messages
+
+if [ "$SYSCTL" = "" ]
+then
+echo "0" > /proc/sys/net/ipv4/conf/all/send_redirects
+else
+    $SYSCTL net.ipv4.conf.all.send_redirects="0"
+fi
+
+
+# However, we'll ensure the secure_redirects option is on instead.
+# This option accepts only from gateways in the default gateways list.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/secure_redirects
+else
+    $SYSCTL net.ipv4.conf.all.secure_redirects="1"
+fi
+
+# rp_filter attempts to implement source address validation as described in RFC
+# 1812, “Requirements for IP Version 4 Routers,” Section 5.3.8. In short, packets are silently
+# dropped if their source address is such that the host’s forwarding table would not route
+# a packet with that destination address out the same interface on which the packet was
+# received. According to RFC 1812, if implemented, routers should enable this feature by
+# default. This form of address validation is often not enabled on routers, so these commands
+# disable it:
+
+# Drop Spoofed Packets coming in on an interface, which, if replied to,
+# would result in the reply going out a different interface.
+
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+echo "1" > $f
+done
+
+# This option logs packets from impossible addresses.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/log_martians
+else
+    $SYSCTL net.ipv4.conf.all.log_martians="1"
+fi
+
+###############################################################################
+#
+# Flush Any Existing Rules or Chains
+#
+
+echo "Flushing Tables ..."
+
+# Reset Default Policies
+$IPT -P INPUT ACCEPT
+$IPT -P FORWARD ACCEPT
+$IPT -P OUTPUT ACCEPT
+$IPT -t nat -P PREROUTING ACCEPT
+$IPT -t nat -P POSTROUTING ACCEPT
+$IPT -t nat -P OUTPUT ACCEPT
+$IPT -t mangle -P PREROUTING ACCEPT
+$IPT -t mangle -P OUTPUT ACCEPT
+
+# Flush all rules
+$IPT -F
+$IPT -t nat -F
+$IPT -t mangle -F
+
+# Erase all non-default chains
+$IPT -X
+$IPT -t nat -X
+$IPT -t mangle -X
+
+if [ "$1" = "stop" ]
+then
+	echo "Firewall completely flushed!  Now running with no firewall."
+	exit 0
+fi
+
+###############################################################################
+echo "Process INPUT Chain"
+
+$IPT -P INPUT DROP
+$IPT -A INPUT -i $iface -p ALL --fragment -j DROP
+$IPT -A INPUT -i $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A INPUT -i $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A INPUT -i $iface -p udp -m length --length 0:28 -j DROP
 
