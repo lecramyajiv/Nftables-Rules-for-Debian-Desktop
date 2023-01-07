@@ -1,0 +1,307 @@
+#! /bin/sh
+
+# This is an explicit IPTABLES firewall based on the book Linux Security by steve suehring
+# and also by slackware firewall generator.
+
+# Load Iptables KernelModules
+
+echo "Loading kernel modules ..."
+
+# core netfilter module
+/sbin/modprobe ip_tables
+
+# the stateful connection tracking module
+/sbin/modprobe ip_conntrack
+
+# filter table module
+/sbin/modprobe iptable_filter
+
+# This is used to limit the number of packets per sec/min/hr
+/sbin/modprobe ipt_limit
+
+# This match checks against the TCP flags
+/sbin/modprobe ipt_state
+
+# The ftp nat module is required for non-PASV ftp support
+/sbin/modprobe ip_nat_ftp
+
+# the module for full ftp connection tracking
+/sbin/modprobe ip_conntrack_ftp
+
+# the module for full irc connection tracking
+/sbin/modprobe ip_conntrack_irc
+
+# Internet connected interface you can get from ip address command
+
+iface="eth0"
+
+# loopback interface
+
+local="lo"
+LO_IP="127.0.0.1"
+
+# Reserved addresses
+
+loop_address="127.0.0.0/8"          # loopback address
+class_a="10.0.0.0/8"                # class A private network
+class_b="172.16.0.0/12"             # class B private network
+class_c="192.168.0.0/16"            # class C private network
+class_d_multicast="224.0.0.0/4"     # Class D Multicast Addresses
+class_e_reserved="240.0.0.0/5"      # Class E Reserved Address
+broadcast_src="0.0.0.0"             # Broadcast source address
+broadcast_dest="255.255.255.255"    # Broadcast destination address
+named_port="0:1023"                 # Well known defined ports
+local_port="1024:65535"             # unprivilaged port range used locally
+XWINDOW_PORTS="6000:6063"           # (TCP) X Window
+test_net="192.0.2.0/24"             # TEST-NET
+link_local="169.254.0.0/16"         # link local networks
+
+# sysctl location.  If set, it will use sysctl to adjust the kernel parameters.
+# If this is set to the empty string (or is unset), the use of sysctl
+# is disabled.
+# To echo the value directly to the /proc file instead
+# SYSCTL=""
+
+SYSCTL="/sbin/sysctl -w"
+
+# IPTables Location - adjust if needed
+
+IPT="/usr/sbin/iptables-nft"
+IPTS="/usr/sbin/iptables-nft-save"
+IPTR="/usr/sbin/iptables-nft-restore"
+
+# Save and Restore arguments handled here
+if [ "$1" = "save" ]
+then
+	echo -n "Saving firewall to /etc/sysconfig/iptables ... "
+	$IPTS > /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+elif [ "$1" = "restore" ]
+then
+	echo -n "Restoring firewall from /etc/sysconfig/iptables ... "
+	$IPTR < /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+fi
+
+# Setting up Sysctl settings
+
+# This enables SYN flood protection.
+# The SYN cookies activation allows your system to accept an unlimited
+# number of TCP connections while still trying to give reasonable
+# service during a denial of service attack.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/tcp_syncookies
+else
+    $SYSCTL net.ipv4.tcp_syncookies="1"
+fi
+
+# This enables source validation by reversed path according to RFC1812.
+# In other words, did the response packet originate from the same interface
+# through which the source packet was sent?  It's recommended for single-homed
+# systems and routers on stub networks.  Since those are the configurations
+# this firewall is designed to support, I turn it on by default.
+# Turn it off if you use multiple NICs connected to the same network.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/rp_filter
+else
+    $SYSCTL net.ipv4.conf.all.rp_filter="1"
+fi
+
+# This kernel parameter instructs the kernel to ignore all ICMP
+# echo requests sent to the broadcast address.  This prevents
+# a number of smurfs and similar DoS nasty attacks.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+else
+    $SYSCTL net.ipv4.icmp_echo_ignore_broadcasts="1"
+fi
+
+# Source routing is rarely used legitimately today. Firewalls commonly drop all source-
+# routed packets. This command disables source-routed packets
+# This option can be used to accept or refuse source routed
+# packets.  It is usually on by default, but is generally
+# considered a security risk.  This option turns it off.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "0" > /proc/sys/net/ipv4/conf/all/accept_source_route
+else
+    $SYSCTL net.ipv4.conf.all.accept_source_route="0"
+fi
+
+# This option can disable ICMP redirects.ICMP redirects
+# are generally considered a security risk and shouldn't be
+# needed by most systems using this generator.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "0" > /proc/sys/net/ipv4/conf/all/accept_redirects
+else
+    $SYSCTL net.ipv4.conf.all.accept_redirects="0"
+fi
+
+# Don't send Redirect Messages
+
+if [ "$SYSCTL" = "" ]
+then
+echo "0" > /proc/sys/net/ipv4/conf/all/send_redirects
+else
+    $SYSCTL net.ipv4.conf.all.send_redirects="0"
+fi
+
+
+# However, we'll ensure the secure_redirects option is on instead.
+# This option accepts only from gateways in the default gateways list.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/secure_redirects
+else
+    $SYSCTL net.ipv4.conf.all.secure_redirects="1"
+fi
+
+# rp_filter attempts to implement source address validation as described in RFC
+# 1812, “Requirements for IP Version 4 Routers,” Section 5.3.8. In short, packets are silently
+# dropped if their source address is such that the host’s forwarding table would not route
+# a packet with that destination address out the same interface on which the packet was
+# received. According to RFC 1812, if implemented, routers should enable this feature by
+# default. This form of address validation is often not enabled on routers, so these commands
+# disable it:
+
+# Drop Spoofed Packets coming in on an interface, which, if replied to,
+# would result in the reply going out a different interface.
+
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+echo "1" > $f
+done
+
+# This option logs packets from impossible addresses.
+
+if [ "$SYSCTL" = "" ]
+then
+    echo "1" > /proc/sys/net/ipv4/conf/all/log_martians
+else
+    $SYSCTL net.ipv4.conf.all.log_martians="1"
+fi
+
+###############################################################################
+#
+# Flush Any Existing Rules or Chains
+#
+
+echo "Flushing Tables ..."
+
+# Reset Default Policies
+$IPT -P INPUT ACCEPT
+$IPT -P FORWARD ACCEPT
+$IPT -P OUTPUT ACCEPT
+$IPT -t nat -P PREROUTING ACCEPT
+$IPT -t nat -P POSTROUTING ACCEPT
+$IPT -t nat -P OUTPUT ACCEPT
+$IPT -t mangle -P PREROUTING ACCEPT
+$IPT -t mangle -P OUTPUT ACCEPT
+
+# Flush all rules
+$IPT -F
+$IPT -t nat -F
+$IPT -t mangle -F
+
+# Erase all non-default chains
+$IPT -X
+$IPT -t nat -X
+$IPT -t mangle -X
+
+if [ "$1" = "stop" ]
+then
+	echo "Firewall completely flushed!  Now running with no firewall."
+	exit 0
+fi
+
+###############################################################################
+echo "Process INPUT Chain"
+
+$IPT -P INPUT DROP
+$IPT -A INPUT -i $iface -p ALL --fragment -j DROP
+$IPT -A INPUT -i $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A INPUT -i $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ALL ACK,RST,SYN,FIN -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags FIN,RST FIN,RST -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ACK,FIN FIN -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ACK,PSH PSH -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ACK,URG URG -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ALL NONE -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ALL ALL -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
+$IPT -A INPUT -i $iface -p tcp --tcp-flags  ALL FIN -j DROP
+$IPT -A INPUT -i $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A INPUT -i $iface -s $class_a -j DROP
+$IPT -A INPUT -i $iface -s $class_b -j DROP
+$IPT -A INPUT -i $iface -s $class_c -j DROP
+$IPT -A INPUT -i $iface -s $class_d_multicast -j DROP
+$IPT -A INPUT -i $iface -s $class_e_reserved -j DROP
+$IPT -A INPUT -i $iface -s $loop_address -j DROP
+$IPT -A INPUT -i $iface -s $broadcast_dest -j DROP
+$IPT -A INPUT -i $iface -s $test_net -j DROP
+$IPT -A INPUT -i $iface -s $link_local -j DROP
+$IPT -A INPUT -i $iface -d $broadcast_src -j DROP
+$IPT -A INPUT -i $iface -d $broadcast_dest -j DROP
+$IPT -A INPUT -i $iface ! -p udp -d $class_d_multicast -j DROP
+$IPT -A INPUT -i $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A INPUT -m pkttype --pkt-type broadcast -j DROP
+$IPT -A INPUT -i $local -j ACCEPT
+$IPT -A INPUT -i $iface -p tcp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p udp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type echo-reply -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type destination-unreachable -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type time-exceeded -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -j RETURN
+
+echo "Process FORWARD Chain ...."
+
+$IPT -P FORWARD DROP
+$IPT -A FORWARD -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A FORWARD -j RETURN
+
+echo "Process OUTPUT chain ...."
+
+$IPT -P OUTPUT DROP
+$IPT -A OUTPUT -o $iface -p ALL --fragment -j DROP
+$IPT -A OUTPUT -o $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A OUTPUT -o $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ALL ACK,RST,SYN,FIN -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags FIN,RST FIN,RST -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ACK,FIN FIN -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ACK,PSH PSH -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ACK,URG URG -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ALL NONE -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ALL ALL -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --tcp-flags  ALL FIN -j DROP
+$IPT -A OUTPUT -o $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A OUTPUT -o $iface -d $broadcast_src -j DROP
+$IPT -A OUTPUT -o $iface -d $broadcast_dest -j DROP
+$IPT -A OUTPUT -o $iface ! -p udp -d $class_d_multicast -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A OUTPUT -o $local -j ACCEPT
+$IPT -A OUTPUT -o $local -p ALL -s $LO_IP -j ACCEPT
+$IPT -A OUTPUT -o $iface -p tcp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p udp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p icmp --icmp-type echo-request -m limit --limit 1/s -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -j RETURN
+
+exit 0
