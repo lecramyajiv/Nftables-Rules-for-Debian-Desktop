@@ -1,0 +1,179 @@
+#! /bin/sh
+
+# This is an explicit IPTABLES firewall based on the book Linux Security by steve suehring
+# and also by slackware firewall generator.
+
+# Load Iptables KernelModules
+
+echo "Loading kernel modules ..."
+
+# core netfilter module
+/sbin/modprobe ip_tables
+
+# the stateful connection tracking module
+/sbin/modprobe ip_conntrack
+
+# filter table module
+/sbin/modprobe iptable_filter
+
+# This is used to limit the number of packets per sec/min/hr
+/sbin/modprobe ipt_limit
+
+# This match checks against the TCP flags
+/sbin/modprobe ipt_state
+
+# The ftp nat module is required for non-PASV ftp support
+/sbin/modprobe ip_nat_ftp
+
+# the module for full ftp connection tracking
+/sbin/modprobe ip_conntrack_ftp
+
+# the module for full irc connection tracking
+/sbin/modprobe ip_conntrack_irc
+
+# load tcp_bbr module
+/sbin/modprobe tcp_bbr
+
+# Internet connected interface you can get from ip address command
+
+iface="eth0"
+
+# loopback interface
+
+local="lo"
+LO_IP="127.0.0.1"
+
+# other
+
+XWINDOW_PORTS="6000:6063"  # Xwindow tcp port
+
+# Run SYSCTL as a script inside the firewall script
+
+sh /etc/rc.d/sysctlrc
+
+# Restore ipsets
+
+# ipset restore < /etc/firehol/iplists
+
+# check if it has loaded
+
+ipset --list -n
+
+# IPTables Location - adjust if needed
+
+IPT="/usr/sbin/iptables-nft"
+IPTS="/usr/sbin/iptables-nft-save"
+IPTR="/usr/sbin/iptables-nft-restore"
+
+# Save and Restore arguments handled here
+if [ "$1" = "save" ]
+then
+	echo -n "Saving firewall to /etc/sysconfig/iptables ... "
+	$IPTS > /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+elif [ "$1" = "restore" ]
+then
+	echo -n "Restoring firewall from /etc/sysconfig/iptables ... "
+	$IPTR < /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+fi
+
+###############################################################################
+#
+# Flush Any Existing Rules or Chains
+#
+
+echo "Flushing Tables ..."
+
+# Reset Default Policies
+$IPT -P INPUT ACCEPT
+$IPT -P FORWARD ACCEPT
+$IPT -P OUTPUT ACCEPT
+$IPT -t nat -P PREROUTING ACCEPT
+$IPT -t nat -P POSTROUTING ACCEPT
+$IPT -t nat -P OUTPUT ACCEPT
+$IPT -t mangle -P PREROUTING ACCEPT
+$IPT -t mangle -P OUTPUT ACCEPT
+
+# Flush all rules
+$IPT -F
+$IPT -t nat -F
+$IPT -t mangle -F
+
+# Erase all non-default chains
+$IPT -X
+$IPT -t nat -X
+$IPT -t mangle -X
+
+if [ "$1" = "stop" ]
+then
+	echo "Firewall completely flushed!  Now running with no firewall."
+	exit 0
+fi
+
+###############################################################################
+echo "Process INPUT Chain"
+
+$IPT -P INPUT DROP
+$IPT -A INPUT -i $iface -p ALL --fragment -j DROP
+$IPT -A INPUT -i $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A INPUT -i $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A INPUT -i $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A INPUT -i $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A INPUT -m pkttype --pkt-type broadcast -j DROP
+$IPT -A INPUT -i $iface -m set --match-set alienvault_reputation src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set cleanmx_phishing src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set snort_ipfilter src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set bitcoin_blockchain_info_30d src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set bitcoin_nodes_30d src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set cleantalk_updated_30d src -j DROP 
+$IPT -A INPUT -i $iface -m set --match-set cruzit_web_attacks src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set cta_cryptowall src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set cybercrime src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set et_compromised src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set feodo_badips src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set greensnow src  -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_ats src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_emd src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_exp src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_fsa src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_hjk src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set hphosts_psh src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set malc0de src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set malwaredomainlist src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set php_harvesters_30d src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set php_spammers_30d src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set socks_proxy_30d src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set threatcrowd src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set xforce_bccs src -j DROP
+$IPT -A INPUT -i $iface -m set --match-set yoyo_adservers src -j DROP
+$IPT -A INPUT -i $local -j ACCEPT
+$IPT -A INPUT -i $iface -p tcp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p udp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type echo-reply -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type destination-unreachable -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type time-exceeded -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -j RETURN
+
+echo "Process FORWARD Chain ...."
+
+$IPT -P FORWARD DROP
+
+echo "Process OUTPUT chain ...."
+
+$IPT -P OUTPUT DROP
+$IPT -A OUTPUT -o $iface -p ALL --fragment -j DROP
+$IPT -A OUTPUT -o $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A OUTPUT -o $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A OUTPUT -o $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A OUTPUT -o $local -j ACCEPT
+$IPT -A OUTPUT -o $local -p ALL -s $LO_IP -j ACCEPT
+$IPT -A OUTPUT -o $iface -p tcp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p udp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p icmp --icmp-type echo-request -m limit --limit 1/s -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -j RETURN
+
+exit 0
