@@ -1,0 +1,79 @@
+#!/bin/bash
+
+echo "flushing Firewall rules"
+nft flush ruleset
+
+if [ "$1" = "stop" ]
+then
+        echo "Firewall completely flushed!  Now running with no firewall."
+        exit 0
+fi
+
+# Begin firewall
+nft add table inet filter
+nft add chain inet filter input { type filter hook input priority 0 \; policy drop \; }
+nft add rule inet filter input iifname eth0 tcp flags != syn ct state new counter drop
+nft add rule inet filter input iifname eth0 ct state invalid,untracked counter drop
+nft add rule inet filter input iifname eth0 udp length { 28-32 } drop
+nft add rule inet filter input iifname eth0 ip frag-off \& 8191 != 0 counter drop
+nft add rule inet filter input iifname eth0 ip6 nexthdr ipv6-frag counter drop
+nft add rule inet filter input iifname eth0 ip saddr 10.0.0.0/8 drop
+nft add rule inet filter input iifname eth0 ip saddr 172.16.0.0/12 drop
+nft add rule inet filter input iifname eth0 ip saddr 192.168.0.0/16 drop
+nft add rule inet filter input iifname eth0 ip saddr 224.0.0.0/4 drop
+nft add rule inet filter input iifname eth0 ip saddr 240.0.0.0/5 drop
+nft add rule inet filter input iifname eth0 ip saddr 127.0.0.0/8 drop
+nft add rule inet filter input iifname eth0 ip saddr 255.255.255.255 drop
+nft add rule inet filter input iifname eth0 ip saddr 169.254.0.0/16 drop
+nft add rule inet filter input iifname eth0 ip saddr 192.168.0.0/16 drop
+nft add rule inet filter input iifname eth0 ip saddr 0.0.0.0/8 drop
+nft add rule inet filter input iifname eth0 ip daddr 224.0.0.0/4 ip protocol != udp drop
+nft add rule inet filter input iifname eth0 ip daddr 255.255.255.255 drop
+nft add rule inet filter input iifname eth0 ip daddr 0.0.0.0/8 drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) \< fin drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == 0x0
+nft add rule inet filter input iifname eth0 tcp flags \& \(syn\|fin\) == \(syn\|fin\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(syn\|rst\) == \(syn\|rst\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|rst\) == \(fin\|rst\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(ack\|fin\) ==  fin drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(ack\|psh\) ==  psh drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(ack\|urg\) ==  urg drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|psh\|urg\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(ack\|rst\|syn\|fin\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(fin\|syn\|rst\|psh\|ack\|urg\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == \(syn\|rst\|ack\|fin\|urg\) drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|ack\|urg\) == fin drop
+nft add rule inet filter input iifname eth0 tcp flags \& \(syn\|ack\|fin\|rst\) == rst drop
+nft add rule inet filter input iifname eth0 meta l4proto tcp tcp dport 6000-6063 tcp flags \& \(fin\|syn\|rst\|ack\) == syn counter drop
+nft add rule inet filter input iifname lo accept
+nft add rule inet filter input iifname eth0 ct state new,established,related counter accept
+nft add rule inet filter input iifname eth0 icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 6/second ct state established,related counter accept
+nft add rule inet filter input iifname eth0 icmpv6 type { nd-router-advert, nd-neighbor-advert } limit rate 6/second ct state established,related counter accept
+nft add rule inet filter input iifname eth0 icmpv6 type { echo-reply, destination-unreachable, time-exceeded } limit rate 6/second ct state established,related counter accept
+nft add rule inet filter input iifname eth0 meta l4proto icmp counter drop
+nft add rule inet filter input iifname eth0 meta l4proto icmp ip frag-off \& 8191 != 0 counter drop
+nft add rule inet filter input iifname eth0 meta l4proto ipv6-icmp counter drop
+
+# Forward policy
+
+nft add chain inet filter forward { type filter hook forward priority 0\; counter\; policy drop\;}
+nft add rule inet filter forward  ct state established,related counter accept
+nft add rule inet filter forward  ct state invalid,untracked counter drop
+
+# Output policy
+
+nft add chain inet filter output  { type filter hook output priority 0 \; counter \; policy drop \; }
+nft add rule inet filter output oifname eth0 ip frag-off \& 8191 != 0 counter drop
+nft add rule inet filter output oifname eth0 ip6 nexthdr ipv6-frag counter drop
+nft add rule inet filter output oifname eth0 meta l4proto tcp tcp dport 6000-6063 tcp flags \& \(fin\|syn\|rst\|ack\) == syn counter drop
+nft add rule inet filter output oifname eth0 ct state invalid,untracked counter drop
+nft add rule inet filter output oifname lo accept
+nft add rule inet filter output oifname eth0  ct state new,established,related accept
+nft add rule inet filter output oifname eth0 icmp type {echo-request, destination-unreachable, time-exceeded} limit rate 6/second ct state new,established,related counter accept
+nft add rule inet filter output oifname eth0 icmpv6 type { nd-router-solicit, nd-neighbor-solicit } limit rate 6/second ct state new,established,related counter accept
+nft add rule inet filter output oifname eth0 icmpv6 type { echo-request, destination-unreachable, time-exceeded } limit rate 6/second ct state new,established,related counter accept
+nft add rule inet filter output oifname eth0 meta l4proto icmp counter drop
+nft add rule inet filter output oifname eth0 meta l4proto icmpv6 drop
+
+
+exit 0
