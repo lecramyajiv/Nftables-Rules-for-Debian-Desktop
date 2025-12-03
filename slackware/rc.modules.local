@@ -20,27 +20,27 @@
 echo "Loading kernel modules ..."
 
 /sbin/modprobe sg                 # Generic SCSI support for SATA DVD-RW
-/sbin/modprobe/autofs4            # Automounter filesystem support
-/sbin/modprobe/bridge             # Core Linux Ethernet bridge implementation
-/sbin/modprobe/br_netfilter       # Allows netfilter/iptables on bridge traffic
-/sbin/modprobe/fuse               # FUSE filesystem support (filesystems in userspace)
-/sbin/modprobe/ip_conntrack       # Legacy connection tracking (now nf_conntrack)
-/sbin/modprobe/ip_conntrack_ftp   # FTP connection tracking helper
-/sbin/modprobe/ip_conntrack_irc   # IRC DCC connection tracking helper
-/sbin/modprobe/ip_nat_ftp         # FTP NAT helper for rewriting dynamic ports
-/sbin/modprobe/ip_tables          # Core IPv4 iptables framework
-/sbin/modprobe/ip6table_filter    # IPv6 filter table
-/sbin/modprobe/ip6table_nat       # IPv6 NAT table
-/sbin/modprobe/iptable_filter     # IPv4 filter table
-/sbin/modprobe/iptable_nat        # IPv4 NAT table
-/sbin/modprobe/ipt_limit          # Rate-limit match module
-/sbin/modprobe/ipt_state          # Legacy state match (replaced by xt_conntrack)
-/sbin/modprobe/macvlan            # Virtual interfaces with independent MAC addresses
-/sbin/modprobe/overlay            # OverlayFS (used by containers)
-/sbin/modprobe/tcp_bbr            # TCP BBR congestion control algorithm
-/sbin/modprobe/veth               # Virtual Ethernet interface pairs
-/sbin/modprobe/xt_addrtype        # Match address type (local, broadcast, multicast)
-/sbin/modprobe/xt_CHECKSUM        # Adjust or compute packet checksums
-/sbin/modprobe/xt_comment         # Add comments to iptables rules
-/sbin/modprobe/xt_conntrack       # Modern connection tracking match module
-/sbin/modprobe/xt_MASQUERADE      # MASQUERADE (dynamic SNAT) NAT target 
+/sbin/modprobe autofs4            # Automounter filesystem support
+/sbin/modprobe bridge             # Core Linux Ethernet bridge implementation
+/sbin/modprobe br_netfilter       # Allows netfilter/iptables on bridge traffic
+/sbin/modprobe fuse               # FUSE filesystem support (filesystems in userspace)
+/sbin/modprobe ip_conntrack       # Legacy connection tracking (now nf_conntrack)
+/sbin/modprobe ip_conntrack_ftp   # FTP connection tracking helper
+/sbin/modprobe ip_conntrack_irc   # IRC DCC connection tracking helper
+/sbin/modprobe ip_nat_ftp         # FTP NAT helper for rewriting dynamic ports
+/sbin/modprobe ip_tables          # Core IPv4 iptables framework
+/sbin/modprobe ip6table_filter    # IPv6 filter table
+/sbin/modprobe ip6table_nat       # IPv6 NAT table
+/sbin/modprobe iptable_filter     # IPv4 filter table
+/sbin/modprobe iptable_nat        # IPv4 NAT table
+/sbin/modprobe ipt_limit          # Rate-limit match module
+/sbin/modprobe ipt_state          # Legacy state match (replaced by xt_conntrack)
+/sbin/modprobe macvlan            # Virtual interfaces with independent MAC addresses
+/sbin/modprobe overlay            # OverlayFS (used by containers)
+/sbin/modprobe tcp_bbr            # TCP BBR congestion control algorithm
+/sbin/modprobe veth               # Virtual Ethernet interface pairs
+/sbin/modprobe xt_addrtype        # Match address type (local, broadcast, multicast)
+/sbin/modprobe xt_CHECKSUM        # Adjust or compute packet checksums
+/sbin/modprobe xt_comment         # Add comments to iptables rules
+/sbin/modprobe xt_conntrack       # Modern connection tracking match module
+/sbin/modprobe xt_MASQUERADE      # MASQUERADE (dynamic SNAT) NAT target 
