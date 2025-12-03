@@ -55,7 +55,7 @@ nft add rule inet filter input iifname eth0 tcp flags \& \(fin\|syn\|rst\|psh\|a
 nft add rule inet filter input iifname eth0 tcp flags \& \(syn\|ack\|fin\|rst\) == rst drop
 nft add rule inet filter input iifname eth0 meta l4proto tcp tcp dport 6000-6063 tcp flags \& \(fin\|syn\|rst\|ack\) == syn counter drop
 nft add rule inet filter input iifname lo accept
-nft add rule inet filter input iifname eth0 ct state new,established,related counter accept
+nft add rule inet filter input iifname eth0 ct state established,related counter accept
 nft add rule inet filter input iifname eth0 icmp type { echo-reply, destination-unreachable, time-exceeded } limit rate 6/second ct state established,related counter accept
 nft add rule inet filter input iifname eth0 icmpv6 type { nd-router-advert, nd-neighbor-advert } limit rate 6/second ct state established,related counter accept
 nft add rule inet filter input iifname eth0 icmpv6 type { echo-reply, destination-unreachable, time-exceeded } limit rate 6/second ct state established,related counter accept
