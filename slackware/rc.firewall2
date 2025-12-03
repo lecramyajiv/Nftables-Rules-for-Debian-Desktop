@@ -1,0 +1,124 @@
+#! /bin/sh
+
+# This is an explicit IPTABLES firewall based on the book Linux Security by steve suehring
+# and also by slackware firewall generator.
+
+# Internet connected interface you can get from ip address command
+
+iface="eth0"
+
+# loopback interface
+
+local="lo"
+LO_IP="127.0.0.1"
+
+# other
+
+XWINDOW_PORTS="6000:6063"  # Xwindow tcp port
+
+# Run SYSCTL as a script inside the firewall script
+
+if [ -x /etc/rc.d/sysctlrc ]; then
+sh /etc/rc.d/sysctlrc
+else
+echo "setup sysctl"
+fi
+
+# Restore ipsets
+
+#sh /opt/ipset/ipset
+
+#  check if it has loaded
+
+#ipset --list -n
+
+## IPTables Location - adjust if needed
+
+IPT="/usr/sbin/iptables-nft"
+IPTS="/usr/sbin/iptables-nft-save"
+IPTR="/usr/sbin/iptables-nft-restore"
+
+# Save and Restore arguments handled here
+if [ "$1" = "save" ]
+then
+	echo -n "Saving firewall to /etc/sysconfig/iptables ... "
+	$IPTS > /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+elif [ "$1" = "restore" ]
+then
+	echo -n "Restoring firewall from /etc/sysconfig/iptables ... "
+	$IPTR < /etc/sysconfig/iptables
+	echo "done"
+	exit 0
+fi
+
+###############################################################################
+#
+# Flush Any Existing Rules or Chains
+#
+
+echo "Flushing Tables ..."
+
+# Reset Default Policies
+$IPT -P INPUT ACCEPT
+$IPT -P FORWARD ACCEPT
+$IPT -P OUTPUT ACCEPT
+$IPT -t nat -P PREROUTING ACCEPT
+$IPT -t nat -P POSTROUTING ACCEPT
+$IPT -t nat -P OUTPUT ACCEPT
+$IPT -t mangle -P PREROUTING ACCEPT
+$IPT -t mangle -P OUTPUT ACCEPT
+
+# Flush all rules
+$IPT -F
+$IPT -t nat -F
+$IPT -t mangle -F
+
+# Erase all non-default chains
+$IPT -X
+$IPT -t nat -X
+$IPT -t mangle -X
+
+if [ "$1" = "stop" ]
+then
+	echo "Firewall completely flushed!  Now running with no firewall."
+	exit 0
+fi
+
+###############################################################################
+echo "Process INPUT Chain"
+
+$IPT -P INPUT DROP
+$IPT -A INPUT -i $iface -p ALL --fragment -j DROP
+$IPT -A INPUT -i $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A INPUT -i $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A INPUT -i $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A INPUT -i $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A INPUT -m pkttype --pkt-type broadcast -j DROP
+$IPT -A INPUT -i $local -j ACCEPT
+$IPT -A INPUT -i $iface -p tcp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p udp -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type echo-reply -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type destination-unreachable -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A INPUT -i $iface -p icmp --icmp-type time-exceeded -m limit --limit 1/s -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+echo "Process FORWARD Chain ...."
+
+$IPT -P FORWARD DROP
+
+echo "Process OUTPUT chain ...."
+
+$IPT -P OUTPUT DROP
+$IPT -A OUTPUT -o $iface -p ALL --fragment -j DROP
+$IPT -A OUTPUT -o $iface -p ALL -m conntrack --ctstate INVALID,UNTRACKED -j DROP
+$IPT -A OUTPUT -o $iface -p tcp ! --syn -m conntrack --ctstate NEW -j DROP
+$IPT -A OUTPUT -o $iface -p udp -m length --length 0:28 -j DROP
+$IPT -A OUTPUT -o $iface -p tcp --syn --destination-port $XWINDOW_PORTS -j DROP
+$IPT -A OUTPUT -o $local -j ACCEPT
+$IPT -A OUTPUT -o $local -p ALL -s $LO_IP -j ACCEPT
+$IPT -A OUTPUT -o $iface -p tcp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p udp -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -o $iface -p icmp --icmp-type echo-request -m limit --limit 1/s -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+
+exit 0
