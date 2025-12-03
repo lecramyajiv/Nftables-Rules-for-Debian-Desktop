@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Run SYSCTL as a script inside the firewall script
+
+if [ -x /etc/rc.d/sysctlrc ]; then
+	sh /etc/rc.d/sysctlrc
+else
+	echo "setup sysctl"
+fi
+
+
 echo "flushing Firewall rules"
 nft flush ruleset
 
